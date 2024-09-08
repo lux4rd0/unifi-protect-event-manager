@@ -22,14 +22,14 @@ logging.basicConfig(
 class UnifiProtectEventManager:
     def __init__(self):
         self.LOCAL_TIMEZONE = pytz.timezone(os.getenv("TZ", "UTC"))
-        self.DEFAULT_PAST_MINUTES = int(os.getenv("DEFAULT_PAST_MINUTES", 5))
-        self.DEFAULT_FUTURE_MINUTES = int(os.getenv("DEFAULT_FUTURE_MINUTES", 5))
-        self.UNIFI_PROTECT_ADDRESS = os.getenv("UNIFI_PROTECT_ADDRESS")
-        self.UNIFI_PROTECT_USERNAME = os.getenv("UNIFI_PROTECT_USERNAME")
-        self.UNIFI_PROTECT_PASSWORD = os.getenv("UNIFI_PROTECT_PASSWORD")
-        self.LOG_INTERVAL = int(
-            os.getenv("LOG_INTERVAL", 10)
-        )  # Log interval in seconds
+        self.DEFAULT_PAST_MINUTES = int(os.getenv("UPEM_DEFAULT_PAST_MINUTES", 5))
+        self.DEFAULT_FUTURE_MINUTES = int(os.getenv("UPEM_DEFAULT_FUTURE_MINUTES", 5))
+        self.UNIFI_PROTECT_ADDRESS = os.getenv("UPEM_UNIFI_PROTECT_ADDRESS")
+        self.UNIFI_PROTECT_USERNAME = os.getenv("UPEM_UNIFI_PROTECT_USERNAME")
+        self.UNIFI_PROTECT_PASSWORD = os.getenv("UPEM_UNIFI_PROTECT_PASSWORD")
+        self.LOG_INTERVAL = int(os.getenv("UPEM_LOG_INTERVAL", 10))
+        self.MAX_RETRIES = int(os.getenv("UPEM_MAX_RETRIES", 3))
+        self.RETRY_DELAY = int(os.getenv("UPEM_RETRY_DELAY", 5))
 
         self.events = {}
         self.timers = {}  # To track and cancel timers
@@ -43,18 +43,18 @@ class UnifiProtectEventManager:
     def check_env_variables(self):
         """Check and log the required environment variables, exit if any are missing."""
         missing_vars = []
-        logging.info(f"UNIFI_PROTECT_ADDRESS: {self.UNIFI_PROTECT_ADDRESS}")
-        logging.info(f"UNIFI_PROTECT_USERNAME: {self.UNIFI_PROTECT_USERNAME}")
+        logging.info(f"UPEM_UNIFI_PROTECT_ADDRESS: {self.UNIFI_PROTECT_ADDRESS}")
+        logging.info(f"UPEM_UNIFI_PROTECT_USERNAME: {self.UNIFI_PROTECT_USERNAME}")
         logging.info(
-            f"UNIFI_PROTECT_PASSWORD: {'***' if self.UNIFI_PROTECT_PASSWORD else 'Not Set'}"
+            f"UPEM_UNIFI_PROTECT_PASSWORD: {'***' if self.UNIFI_PROTECT_PASSWORD else 'Not Set'}"
         )
 
         if not self.UNIFI_PROTECT_ADDRESS:
-            missing_vars.append("UNIFI_PROTECT_ADDRESS")
+            missing_vars.append("UPEM_UNIFI_PROTECT_ADDRESS")
         if not self.UNIFI_PROTECT_USERNAME:
-            missing_vars.append("UNIFI_PROTECT_USERNAME")
+            missing_vars.append("UPEM_UNIFI_PROTECT_USERNAME")
         if not self.UNIFI_PROTECT_PASSWORD:
-            missing_vars.append("UNIFI_PROTECT_PASSWORD")
+            missing_vars.append("UPEM_UNIFI_PROTECT_PASSWORD")
 
         if missing_vars:
             logging.error(f"Missing environment variables: {', '.join(missing_vars)}")
@@ -150,7 +150,9 @@ class UnifiProtectEventManager:
                         return {
                             "events": {
                                 identifier: {
-                                    "start_time": self.format_datetime(event["start_time"]),
+                                    "start_time": self.format_datetime(
+                                        event["start_time"]
+                                    ),
                                     "end_time": self.format_datetime(event["end_time"]),
                                     "remaining_time_seconds": remaining_time,
                                     "cameras": event["cameras"],
@@ -185,7 +187,9 @@ class UnifiProtectEventManager:
         with self.event_lock:
             event = self.events.get(identifier)
             if not event:
-                logging.info(f"Event {identifier} was already cancelled or does not exist.")
+                logging.info(
+                    f"Event {identifier} was already cancelled or does not exist."
+                )
                 return
 
         logging.info(f"Running protect-archiver command for event {identifier}.")
@@ -230,29 +234,45 @@ class UnifiProtectEventManager:
 
         logging.info(f"Executing command: {' '.join(command)}")
 
-        try:
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
-
-            for stdout_line in iter(process.stdout.readline, ""):
-                logging.info(stdout_line.strip())
-
-            for stderr_line in iter(process.stderr.readline, ""):
-                logging.info(stderr_line.strip())
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-
-            if process.returncode != 0:
-                logging.error(
-                    f"Export failed for event {identifier} with return code {process.returncode}."
+        attempt = 0
+        while attempt < self.MAX_RETRIES:
+            try:
+                process = subprocess.Popen(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
                 )
+
+                for stdout_line in iter(process.stdout.readline, ""):
+                    logging.info(stdout_line.strip())
+
+                for stderr_line in iter(process.stderr.readline, ""):
+                    logging.error(stderr_line.strip())
+
+                process.stdout.close()
+                process.stderr.close()
+                process.wait()
+
+                if process.returncode == 0:
+                    logging.info(f"Export completed for event {identifier}.")
+                    break  # Exit loop on successful execution
+                else:
+                    logging.error(
+                        f"Export failed for event {identifier} with return code {process.returncode}. Retrying..."
+                    )
+
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Export failed for event {identifier}: {e}. Retrying...")
+
+            # Increment attempt counter and delay before retrying
+            attempt += 1
+            if attempt < self.MAX_RETRIES:
+                logging.info(
+                    f"Retrying in {self.RETRY_DELAY} seconds... (Attempt {attempt}/{self.MAX_RETRIES})"
+                )
+                time.sleep(self.RETRY_DELAY)
             else:
-                logging.info(f"Export completed for event {identifier}.")
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Export failed for event {identifier}: {e}")
+                logging.error(
+                    f"Max retries reached. Failed to export event {identifier}."
+                )
 
         # Safely delete the event after execution
         with self.event_lock:
