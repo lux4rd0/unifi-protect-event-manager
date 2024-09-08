@@ -27,7 +27,7 @@ The **Unifi Protect Event Manager** is a Flask-based service that integrates wit
 
 ## How it Works
 
-The service runs as a Flask web app, exposing several API endpoints to manage events. Events represent time periods during which video footage from one or more UniFi cameras is exported. These events can be started, extended, or canceled. 
+The service runs as a Flask web app, exposing several API endpoints to manage events. Events represent time periods during which video footage from one or more UniFi cameras is exported. These events can be started, extended, or canceled.
 
 Each event has a start time, an end time, a list of cameras, and an associated identifier. Events can be managed via the following operations:
 - **Start/Extend Event**: Create or extend an event by specifying how many minutes in the past and future to record.
@@ -35,6 +35,32 @@ Each event has a start time, an end time, a list of cameras, and an associated i
 - **View Status**: View the status of all running events, including remaining time, start/end time, and cameras.
 
 The system is designed to periodically log the current status of active events and automatically delete them once they are complete.
+
+### Video Export using Protect-Archiver
+
+This project relies on [**unifitoolbox/protect-archiver**](https://github.com/unifi-toolbox/protect-archiver) to manage the actual video export. **Protect-archiver** is a command-line utility that interfaces with UniFi Protect to download, list, or delete recordings.
+
+The integration with **protect-archiver** allows this service to trigger video exports at specific times by executing protect-archiver commands in the background. Here’s how it works:
+
+- When an event is triggered via the Flask API, the system calculates the start and end time for video export.
+- It dynamically constructs and runs the **protect-archiver** command to download footage within the defined time range.
+- The cameras to be included in the export can be specified or defaulted to all cameras.
+  
+Example command executed by the system:
+```
+protect-archiver download \
+  --address <UNIFI_PROTECT_ADDRESS> \
+  --username <UNIFI_PROTECT_USERNAME> \
+  --password <UNIFI_PROTECT_PASSWORD> \
+  --start <start_time> \
+  --end <end_time> \
+  --cameras=<cameras> \
+  --no-use-subfolders <output_folder>
+```
+
+The full details of **protect-archiver** can be found in the official GitHub repository: [unifitoolbox/protect-archiver](https://github.com/unifi-toolbox/protect-archiver).
+
+This project utilizes **protect-archiver** to simplify the interaction with UniFi Protect and automate the recording export process based on specific events. This makes it an ideal tool for managing video exports with precise control over timing and camera selection.
 
 ---
 
