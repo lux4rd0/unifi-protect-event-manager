@@ -22,6 +22,10 @@ The **Unifi Protect Event Manager** is a Flask-based service that integrates wit
     - [REST Command](#rest-command)
     - [Automation Example](#automation-example)
 4. [API Endpoints](#api-endpoints)
+5. [Web Interface Overview](#web-interface-overview)
+    - [Running Events Table](#running-events-table)
+    - [Controls Section](#controls-section)
+    - [API Documentation](#api-documentation)
 
 ---
 
@@ -38,13 +42,13 @@ The system is designed to periodically log the current status of active events a
 
 ### Video Export using Protect-Archiver
 
-This project relies on [**unifitoolbox/protect-archiver**](https://github.com/unifi-toolbox/protect-archiver) to manage the actual video export. **Protect-archiver** is a command-line utility that interfaces with UniFi Protect to download, list, or delete recordings.
+This project relies on [**unifitoolbox/protect-archiver**](https://github.com/unifi-toolbox/protect-archiver) to manage the video export. **Protect-archiver** is a command-line utility that interfaces with UniFi Protect to download, list, or delete recordings.
 
 The integration with **protect-archiver** allows this service to trigger video exports at specific times by executing protect-archiver commands in the background. Here’s how it works:
 
 - When an event is triggered via the Flask API, the system calculates the start and end time for video export.
 - It dynamically constructs and runs the **protect-archiver** command to download footage within the defined time range.
-- The cameras to be included in the export can be specified or defaulted to all cameras.
+- The export's included cameras can be specified or defaulted to all cameras.
   
 Example command executed by the system:
 ```
@@ -190,3 +194,48 @@ Here are the key API endpoints available in the UniFi Protect Event Manager:
   - **Query Parameter**: `identifier=<event_identifier>`
   - **Example**: `/status?identifier=door1`
 
+
+---
+
+## Web Interface Overview
+
+This service provides a simple web interface accessible by default on port **8888**. The web interface allows users to easily manage video recording events from their UniFi Protect cameras. Once deployed, you can access the interface by navigating to:
+
+```
+http://<server_ip>:8888/
+```
+
+### Home Page (`index.html`)
+
+The home page provides an intuitive interface for starting, extending, and canceling video recording events. Here’s a breakdown of the different sections and functionality available:
+
+### Running Events Table
+
+- **Event Identifier**: A unique identifier for each event, which is either auto-generated or provided by the user.
+- **Start Time**: The time when the event was started.
+- **End Time**: The time when the event will end.
+- **Remaining Time**: The time remaining before the event completes.
+- **Cameras**: Lists the camera IDs involved in the event. If no specific cameras are provided, "All Cameras" is displayed.
+- **Actions**: Two buttons allow you to **Extend** or **Cancel** an event. When extended, the event continues recording for the number of minutes specified in the `Future Minutes` field.
+
+### Controls Section
+
+This section allows you to create or extend a recording event for specific cameras.
+
+- **Event Identifier**: A text input where you can specify a unique identifier for your event.
+- **Past Minutes**: Input the number of minutes in the past that should be included in the recording. This is useful if you want to capture footage that occurred just before the event was triggered.
+- **Future Minutes**: Input the number of minutes in the future that the recording should continue.
+- **Camera IDs**: Optionally, specify a comma-separated list of camera IDs. If no cameras are specified, all available cameras will be used.
+
+Buttons:
+- **Start/Extend Event**: Starts a new event or extends an existing one with the specified identifier, past, and future minutes.
+- **Cancel Event**: Cancels the event with the provided identifier.
+
+### API Documentation
+
+The web interface also provides examples of how to use the exposed API endpoints with `curl`. You’ll find this documentation at the bottom of the page, making it easy for users to interact with the service programmatically. The available examples include:
+- **Start Event**
+- **Cancel Event**
+- **Check Event Status**
+
+You can modify these examples to match your specific setup by changing the identifiers, cameras, and time intervals.
