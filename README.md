@@ -129,6 +129,8 @@ services:
 - **`UPEM_DEFAULT_PAST_MINUTES`**: Default time in minutes to record from the past.
 - **`UPEM_DEFAULT_FUTURE_MINUTES`**: Default time in minutes to record into the future.
 - **`UPEM_LOG_INTERVAL`**: Interval in seconds when the system logs active event status.
+- **`UPEM_MAX_RETRIES`**: Maximum number of retry attempts for failed exports.
+- **`UPEM_RETRY_DELAY`**: Delay in seconds between retry attempts for failed exports.
 
 ## Home Assistant Integration
 
@@ -143,7 +145,7 @@ In Home Assistant, set up a REST command to trigger UniFi Protect Event Manager 
 ```yaml
 rest_command:
   start_unifi_protect_event:
-    url: "http://upem.lux4rd0.com:8888/start"
+    url: "http://<server_ip>:8888"
     method: POST
     headers:
       content-type: "application/json"
