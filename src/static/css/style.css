@@ -1,0 +1,191 @@
+/* General page styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
+    color: #333;
+}
+
+/* Container for content */
+.container {
+    max-width: 1200px;
+    margin: 40px auto;
+    background-color: #ffffff;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.container:hover {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Headings */
+h1, h2 {
+    color: #444;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 36px;
+    border-bottom: 3px solid #007bff;
+    display: inline-block;
+    padding-bottom: 10px;
+}
+
+h2 {
+    font-size: 28px;
+    border-bottom: 2px solid #ddd;
+    display: inline-block;
+    padding-bottom: 8px;
+}
+
+/* Status and controls sections */
+.status, .controls {
+    margin-bottom: 25px;
+    background-color: #f7f7f7;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+/* Buttons */
+button {
+    padding: 12px 18px;
+    font-size: 16px;
+    margin: 10px 5px;
+    border: none;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Inputs */
+input[type="number"], input[type="text"] {
+    padding: 10px;
+    font-size: 16px;
+    margin: 8px 5px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.3s ease;
+    width: calc(100% - 20px);
+}
+
+input[type="number"]:focus, input[type="text"]:focus {
+    border-color: #007bff;
+}
+
+input[type="number"] {
+    width: 70px;
+}
+
+input[type="text"].identifier {
+    width: 180px;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 25px;
+}
+
+table th, table td {
+    text-align: center;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    font-size: 16px;
+    color: #555;
+}
+
+table th:first-child, table td:first-child {
+    text-align: left;  /* Align "Event Identifier" to the left */
+}
+
+table th {
+    background-color: #007bff;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* Documentation section */
+.documentation {
+    margin-top: 50px;
+    border-top: 2px solid #ccc;
+    padding-top: 20px;
+    background-color: #f9fafc;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+pre {
+    background-color: #eef2f7;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #333;
+    overflow-x: auto;
+}
+
+/* Event details */
+.event-details p {
+    margin: 10px 0;
+    font-weight: bold;
+    color: #555;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    h2 {
+        font-size: 24px;
+    }
+
+    table th, table td {
+        padding: 10px;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+}

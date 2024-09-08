@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unifi Protect Event Handler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Unifi Protect Event Handler</h1>
+
+        <!-- Running Events Section -->
+        <div id="running-events">
+            <h2>Running Events:</h2>
+            <table id="events-table">
+                <thead>
+                    <tr>
+                        <th>Event Identifier</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Remaining Time</th>
+                        <th>Cameras</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="events-list">
+                    <tr>
+                        <td colspan="6">No running events</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Controls for Starting Events -->
+        <div class="controls">
+            <label for="identifier">Event Identifier:</label>
+            <input type="text" id="identifier" class="identifier" placeholder="door1">
+            &nbsp;&nbsp;
+            <label for="past_minutes">Past Minutes:</label>
+            <input type="number" id="past_minutes" value="5">
+            &nbsp;&nbsp;
+            <label for="future_minutes">Future Minutes:</label>
+            <input type="number" id="future_minutes" value="5">
+            <br>
+            <label for="camera_ids">Camera IDs (comma-separated):</label>
+            <input type="text" id="camera_ids" placeholder="662e82ab009dc003e400044c, 662e82ab0152c003e400044f">
+            <br>
+            <button onclick="startEvent()">Start/Extend Event</button>
+        </div>
+
+        <div class="documentation">
+            <h2>API Documentation</h2>
+            <h3>1. Start Event</h3>
+            <p><strong>Endpoint:</strong> <code>POST <span id="start-url"></span></code></p>
+            <pre id="start-example"></pre>
+
+            <h3>2. Cancel Event</h3>
+            <p><strong>Endpoint:</strong> <code>POST <span id="cancel-url"></span></code></p>
+            <pre id="cancel-example"></pre>
+
+            <h3>3. Check Event Status</h3>
+            <p><strong>Endpoint:</strong> <code>GET <span id="status-url"></span></code></p>
+            <pre id="status-example"></pre>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
