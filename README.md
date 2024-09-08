@@ -3,7 +3,7 @@
 
 The **Unifi Protect Event Manager** is a Flask-based service that integrates with UniFi Protect to manage and trigger video exports based on events like motion detection or doorbell rings. It allows for controlling video recording events by specifying past and future times and filtering cameras. 
 
-<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2024/09/unifi-protect-event-manager_index_screenshot.png"></center>
+<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2024/09/unifi-protect-event-manager_index_screenshot.png?v=01"></center>
 
 ## Features
 
