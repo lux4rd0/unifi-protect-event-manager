@@ -82,37 +82,43 @@ You can use the following Docker Compose setup to deploy this service via Docker
 1. Create a `docker-compose.yml` file with the following contents:
 
 ```yaml
-version: "3"
+name: unifi-protect-event-handler
 services:
-  unifi_protect_event_manager:
-    image: your-docker-image-name
-    container_name: unifi_protect_event_manager
-    ports:
-      - "8888:8888"
+  unifi-protect-event-handler:
+    container_name: unifi-protect-event-handler
     environment:
-      TZ: "America/Chicago"
-      UNIFI_PROTECT_ADDRESS: "your-unifi-protect-address"
-      UNIFI_PROTECT_USERNAME: "your-username"
-      UNIFI_PROTECT_PASSWORD: "your-password"
-      DEFAULT_PAST_MINUTES: 5
-      DEFAULT_FUTURE_MINUTES: 5
-      LOG_INTERVAL: 10
+      UPEM_DEFAULT_FUTURE_MINUTES: "5"
+      UPEM_DEFAULT_PAST_MINUTES: "5"
+      UPEM_TZ: America/Chicago
+      UPEM_UNIFI_PROTECT_ADDRESS: unifi01.lux4rd0.com
+      UPEM_UNIFI_PROTECT_PASSWORD: PASSWORD
+      UPEM_UNIFI_PROTECT_USERNAME: protect-archiver
+      UPEM_LOG_INTERVAL: 5
+    ports:
+      - mode: ingress
+        target: 8888
+        published: "8888"
+        protocol: tcp
     volumes:
-      - ./downloads:/app/downloads
-    restart: unless-stopped
+      - type: bind
+        source: /video/unifi-protect-event-handler
+        target: /app/downloads
+        bind:
+          create_host_path: true
+    image: lux4rd0/unifi-protect-event-manager:latest
 ```
 
-2. Run `docker-compose up -d` to start the service.
+2. Run `docker compose up -d` to start the service.
 
 ### Environment Variables
 
 - **`TZ`**: Timezone setting (defaults to UTC if not set).
-- **`UNIFI_PROTECT_ADDRESS`**: Address of your UniFi Protect instance.
-- **`UNIFI_PROTECT_USERNAME`**: Username for accessing UniFi Protect.
-- **`UNIFI_PROTECT_PASSWORD`**: Password for accessing UniFi Protect.
-- **`DEFAULT_PAST_MINUTES`**: Default time in minutes to record from the past.
-- **`DEFAULT_FUTURE_MINUTES`**: Default time in minutes to record into the future.
-- **`LOG_INTERVAL`**: Interval in seconds when the system logs active event status.
+- **`UPEM_UNIFI_PROTECT_ADDRESS`**: Address of your UniFi Protect instance.
+- **`UPEM_UNIFI_PROTECT_USERNAME`**: Username for accessing UniFi Protect.
+- **`UPEM_UNIFI_PROTECT_PASSWORD`**: Password for accessing UniFi Protect.
+- **`UPEM_DEFAULT_PAST_MINUTES`**: Default time in minutes to record from the past.
+- **`UPEM_DEFAULT_FUTURE_MINUTES`**: Default time in minutes to record into the future.
+- **`UPEM_LOG_INTERVAL`**: Interval in seconds when the system logs active event status.
 
 ---
 
@@ -122,14 +128,14 @@ This system can be easily integrated into Home Assistant to trigger video export
 
 ### REST Command
 
-In Home Assistant, set up a REST command to trigger events in the UniFi Protect Event Manager.
+In Home Assistant, set up a REST command to trigger UniFi Protect Event Manager events.
 
 1. Add the following to your `configuration.yaml`:
 
 ```yaml
 rest_command:
   start_unifi_protect_event:
-    url: "http://nas02.boutique.brieflybeautiful.com:8888/start"
+    url: "http://upem.lux4rd0.com:8888/start"
     method: POST
     headers:
       content-type: "application/json"
@@ -204,7 +210,7 @@ Here are the key API endpoints available in the UniFi Protect Event Manager:
 
 ## Web Interface Overview
 
-This service provides a simple web interface accessible by default on port **8888**. The web interface allows users to easily manage video recording events from their UniFi Protect cameras. Once deployed, you can access the interface by navigating to:
+This service provides a simple web interface accessible by default on port **8888**. The web interface lets users easily manage video recording events from their UniFi Protect cameras. Once deployed, you can access the interface by navigating to:
 
 ```
 http://<server_ip>:8888/
@@ -216,24 +222,24 @@ The home page provides an intuitive interface for starting, extending, and cance
 
 ### Running Events Table
 
-- **Event Identifier**: A unique identifier for each event, which is either auto-generated or provided by the user.
+- **Event Identifier**: A unique identifier for each event, either auto-generated or user-provided.
 - **Start Time**: The time when the event was started.
 - **End Time**: The time when the event will end.
 - **Remaining Time**: The time remaining before the event completes.
-- **Cameras**: Lists the camera IDs involved in the event. If no specific cameras are provided, "All Cameras" is displayed.
-- **Actions**: Two buttons allow you to **Extend** or **Cancel** an event. When extended, the event continues recording for the number of minutes specified in the `Future Minutes` field.
+- **Cameras**: This field lists the camera IDs involved in the event. If no specific cameras are provided, "All Cameras" is displayed.
+- **Actions**: Two buttons allow you to **Extend** or **Cancel** an event. When extended, the event continues recording for the minutes specified in the `Future Minutes` field.
 
 ### Controls Section
 
 This section allows you to create or extend a recording event for specific cameras.
 
 - **Event Identifier**: A text input where you can specify a unique identifier for your event.
-- **Past Minutes**: Input the number of minutes in the past that should be included in the recording. This is useful if you want to capture footage that occurred just before the event was triggered.
+- **Past Minutes**: Input the number of minutes in the past that should be included in the recording. This is useful for capturing footage just before the event is triggered.
 - **Future Minutes**: Input the number of minutes in the future that the recording should continue.
 - **Camera IDs**: Optionally, specify a comma-separated list of camera IDs. If no cameras are specified, all available cameras will be used.
 
 Buttons:
-- **Start/Extend Event**: Starts a new event or extends an existing one with the specified identifier, past, and future minutes.
+- **Start/Extend Event**: This function starts a new event or extends an existing one with the specified identifier, past, and future minutes.
 - **Cancel Event**: Cancels the event with the provided identifier.
 
 ### API Documentation
