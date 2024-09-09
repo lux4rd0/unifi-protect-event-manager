@@ -30,14 +30,14 @@ class UnifiProtectEventManager:
         self.LOG_INTERVAL = int(os.getenv("UPEM_LOG_INTERVAL", 10))
         self.MAX_RETRIES = int(os.getenv("UPEM_MAX_RETRIES", 3))
         self.RETRY_DELAY = int(os.getenv("UPEM_RETRY_DELAY", 5))
+        self.EXPORT_TIMEOUT = int(os.getenv("UPEM_EXPORT_TIMEOUT", 300))
 
         self.events = {}
-        self.timers = {}  # To track and cancel timers
+        self.timers = {}
         self.event_lock = Lock()
 
         self.check_env_variables()
 
-        # Start the background logger
         Thread(target=self.log_active_events_periodically, daemon=True).start()
 
     def check_env_variables(self):
@@ -111,7 +111,8 @@ class UnifiProtectEventManager:
                 message = f"New event {identifier} started"
 
             logging.info(
-                f"{message}. Start: {self.events[identifier]['start_time']}, End: {self.events[identifier]['end_time']}"
+                f"{message}. Start: {self.format_datetime(self.events[identifier]['start_time'])}, "
+                f"End: {self.format_datetime(self.events[identifier]['end_time'])}"
             )
 
             # Schedule the export at the event end time
@@ -123,7 +124,7 @@ class UnifiProtectEventManager:
             timer.start()
             self.timers[identifier] = timer  # Store the timer for cancellation
 
-            return message
+        return message
 
     def cancel_event(self, identifier):
         with self.event_lock:
@@ -183,16 +184,18 @@ class UnifiProtectEventManager:
                 return {"events": all_events}
 
     def execute_export(self, identifier):
-        # Check if the event still exists (may have been cancelled)
+        event = None
         with self.event_lock:
-            event = self.events.get(identifier)
-            if not event:
-                logging.info(
-                    f"Event {identifier} was already cancelled or does not exist."
-                )
-                return
+            event = self.events.pop(identifier, None)
+            if identifier in self.timers:
+                del self.timers[identifier]
 
-        logging.info(f"Running protect-archiver command for event {identifier}.")
+        if not event:
+            logging.info(f"Event {identifier} was already cancelled or does not exist.")
+            return
+
+        logging.info(f"Starting export process for event {identifier}")
+
         start_str = event["start_time"].strftime("%Y-%m-%d %H:%M:%S%z")
         end_str = event["end_time"].strftime("%Y-%m-%d %H:%M:%S%z")
 
@@ -201,7 +204,6 @@ class UnifiProtectEventManager:
             if not event["cameras"] or all(camera == "" for camera in event["cameras"])
             else f"--cameras={','.join(event['cameras'])}"
         )
-        logging.info(f"Using cameras: {cameras_arg}")
 
         script_dir = os.path.dirname(os.path.realpath(__file__))
         downloads_folder = os.path.join(script_dir, "downloads")
@@ -234,18 +236,20 @@ class UnifiProtectEventManager:
 
         logging.info(f"Executing command: {' '.join(command)}")
 
-        attempt = 0
-        while attempt < self.MAX_RETRIES:
+        # Capture the output and log it
+        for attempt in range(self.MAX_RETRIES):
             try:
                 process = subprocess.Popen(
                     command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
                 )
 
+                # Log stdout
                 for stdout_line in iter(process.stdout.readline, ""):
                     logging.info(stdout_line.strip())
 
+                # Log stderr
                 for stderr_line in iter(process.stderr.readline, ""):
-                    logging.error(stderr_line.strip())
+                    logging.info(stderr_line.strip())
 
                 process.stdout.close()
                 process.stderr.close()
@@ -253,7 +257,7 @@ class UnifiProtectEventManager:
 
                 if process.returncode == 0:
                     logging.info(f"Export completed for event {identifier}.")
-                    break  # Exit loop on successful execution
+                    break
                 else:
                     logging.error(
                         f"Export failed for event {identifier} with return code {process.returncode}. Retrying..."
@@ -262,28 +266,17 @@ class UnifiProtectEventManager:
             except subprocess.CalledProcessError as e:
                 logging.error(f"Export failed for event {identifier}: {e}. Retrying...")
 
-            # Increment attempt counter and delay before retrying
-            attempt += 1
-            if attempt < self.MAX_RETRIES:
+            if attempt < self.MAX_RETRIES - 1:
                 logging.info(
-                    f"Retrying in {self.RETRY_DELAY} seconds... (Attempt {attempt}/{self.MAX_RETRIES})"
+                    f"Retrying in {self.RETRY_DELAY} seconds... (Attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 time.sleep(self.RETRY_DELAY)
-            else:
-                logging.error(
-                    f"Max retries reached. Failed to export event {identifier}."
-                )
+        else:
+            logging.error(f"Max retries reached. Failed to export event {identifier}.")
 
-        # Safely delete the event after execution
-        with self.event_lock:
-            if identifier in self.events:
-                del self.events[identifier]
-                logging.info(f"Event {identifier} successfully removed after export.")
-            else:
-                logging.warning(f"Event {identifier} was already removed.")
+        logging.info(f"Finished export process for event {identifier}")
 
     def log_active_events_periodically(self):
-        """Logs the status of active events every configured interval."""
         while True:
             with self.event_lock:
                 if self.events:
@@ -363,4 +356,4 @@ def status_event():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8888, debug=True)
+    app.run(host="0.0.0.0", port=8888, debug=False, threaded=True)
