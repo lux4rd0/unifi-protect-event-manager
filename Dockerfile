@@ -1,10 +1,11 @@
 # Use the unifitoolbox/protect-archiver as the base image
 FROM unifitoolbox/protect-archiver:latest
 
-# Install Python and pip
+# Install Python, pip, and ffmpeg
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    ffmpeg \
     && apt-get clean
 
 # Set the working directory for your app
