@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template
 from threading import Timer, Lock, Thread
 import sys
 import time
+import re
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -31,6 +32,9 @@ class UnifiProtectEventManager:
         self.MAX_RETRIES = int(os.getenv("UPEM_MAX_RETRIES", 3))
         self.RETRY_DELAY = int(os.getenv("UPEM_RETRY_DELAY", 5))
         self.EXPORT_TIMEOUT = int(os.getenv("UPEM_EXPORT_TIMEOUT", 300))
+        self.KEEP_SPLIT_FILES = (
+            os.getenv("UPEM_KEEP_SPLIT_FILES", "true").lower() == "true"
+        )
 
         self.events = {}
         self.timers = {}
@@ -48,6 +52,7 @@ class UnifiProtectEventManager:
         logging.info(
             f"UPEM_UNIFI_PROTECT_PASSWORD: {'***' if self.UNIFI_PROTECT_PASSWORD else 'Not Set'}"
         )
+        logging.info(f"UPEM_KEEP_SPLIT_FILES: {self.KEEP_SPLIT_FILES}")
 
         if not self.UNIFI_PROTECT_ADDRESS:
             missing_vars.append("UPEM_UNIFI_PROTECT_ADDRESS")
@@ -183,6 +188,102 @@ class UnifiProtectEventManager:
                         all_events[id] = {"status": "no_event"}
                 return {"events": all_events}
 
+    def combine_videos(self, folder_path):
+        """
+        This method will group and combine videos in the specified folder based on their camera name and order them by timestamp.
+        It will remove the original files if UPEM_KEEP_SPLIT_FILES is set to 'false'.
+        """
+        video_files = [f for f in os.listdir(folder_path) if f.endswith(".mp4")]
+
+        if not video_files:
+            logging.info(f"No .mp4 files found in {folder_path}.")
+            return
+
+        logging.info(f"Found {len(video_files)} video files in {folder_path}.")
+
+        def get_camera_name(filename):
+            # Extract everything before the timestamp part (i.e., the camera name)
+            match = re.match(
+                r"(.+?) - \d{4}-\d{2}-\d{2} - \d{2}\.\d{2}\.\d{2}-\d{4}\.mp4", filename
+            )
+            if match:
+                return match.group(1)
+            return None
+
+        def extract_timestamp(filename):
+            # Extract timestamp from filename, assuming the format "YYYY-MM-DD - HH.MM.SS-xxxx"
+            match = re.search(r"(\d{4}-\d{2}-\d{2}) - (\d{2}\.\d{2}\.\d{2})", filename)
+            if match:
+                date_part, time_part = match.groups()
+                # Combine the date and time part to create a datetime object for sorting
+                return datetime.strptime(
+                    f"{date_part} {time_part}", "%Y-%m-%d %H.%M.%S"
+                )
+            return None
+
+        grouped_videos = {}
+
+        for video_file in video_files:
+            camera_name = get_camera_name(video_file)
+            if camera_name:
+                logging.info(f"Grouping video: {video_file} under {camera_name}")
+                if camera_name not in grouped_videos:
+                    grouped_videos[camera_name] = []
+                grouped_videos[camera_name].append(
+                    os.path.join(folder_path, video_file)
+                )
+
+        for camera_name, video_group in grouped_videos.items():
+            if len(video_group) > 1:
+                # Sort videos by their extracted timestamps
+                video_group.sort(key=lambda v: extract_timestamp(os.path.basename(v)))
+
+                # Use the name of the first video for the output filename
+                first_video_name = os.path.basename(video_group[0])
+                output_filename = first_video_name.replace(".mp4", " - combined.mp4")
+                output_filepath = os.path.join(folder_path, output_filename)
+
+                logging.info(
+                    f"Combining {len(video_group)} videos into {output_filepath}"
+                )
+
+                # Create a temporary filelist for ffmpeg
+                with open(os.path.join(folder_path, "filelist.txt"), "w") as f:
+                    for video in video_group:
+                        f.write(f"file '{video}'\n")
+
+                # Run ffmpeg to concatenate videos
+                concat_command = [
+                    "ffmpeg",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    os.path.join(folder_path, "filelist.txt"),
+                    "-c",
+                    "copy",
+                    output_filepath,
+                ]
+                subprocess.run(concat_command)
+
+                logging.info(
+                    f"Combined {len(video_group)} videos into {output_filepath}"
+                )
+
+                # Cleanup - Remove original files if KEEP_SPLIT_FILES is false
+                if not self.KEEP_SPLIT_FILES:
+                    for video in video_group:
+                        logging.info(f"Removing original video: {video}")
+                        os.remove(video)
+
+                # Remove the temporary filelist
+                os.remove(os.path.join(folder_path, "filelist.txt"))
+            else:
+                logging.info(
+                    f"Only one video found for {camera_name}, skipping combination."
+                )
+
     def execute_export(self, identifier):
         event = None
         with self.event_lock:
@@ -277,6 +378,10 @@ class UnifiProtectEventManager:
             logging.error(f"Max retries reached. Failed to export event {identifier}.")
 
         logging.info(f"Finished export process for event {identifier}")
+
+        # Combine the videos after the export completes
+        logging.info(f"Starting video combination for folder {target_folder}")
+        self.combine_videos(target_folder)
 
     def log_active_events_periodically(self):
         while True:
