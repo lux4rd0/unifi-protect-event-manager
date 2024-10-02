@@ -208,7 +208,9 @@ class UnifiProtectEventManager:
         script_dir = os.path.dirname(os.path.realpath(__file__))
         downloads_folder = os.path.join(script_dir, "downloads")
         folder_time = event["start_time"].strftime("%Y/%m/%d/%H.%M.%S")
-        target_folder = os.path.join(downloads_folder, folder_time)
+
+        # Include identifier in the folder structure
+        target_folder = os.path.join(downloads_folder, identifier, folder_time)
 
         if not os.path.exists(target_folder):
             os.makedirs(target_folder)
