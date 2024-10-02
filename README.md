@@ -55,7 +55,7 @@ By leveraging **protect-archiver**, this service automates the video export proc
 1. **Event Handling**: When an event is started or extended through the API, the system calculates the appropriate start and end times for the video export.
 2. **Dynamic Command Construction**: Based on the event details, the system constructs a **protect-archiver** command to export video footage. This includes defining the time range and selecting the cameras involved.
 3. **Background Execution**: The service executes the **protect-archiver** command in the background, ensuring the video is downloaded to a specified output folder.
-4. **Camera Selection**: Users can specify which cameras to include in the export. The system defaults to exporting footage from all cameras if no cameras are provided.
+4. **Camera Selection**: Users can specify which cameras to include in the export. If no cameras are provided, the system defaults to exporting footage from all cameras.
 
 #### Example Command
 
@@ -79,7 +79,7 @@ protect-archiver download \
 
 #### Why Protect-Archiver?
 
-Using **protect-archiver** allows this service to streamline interactions with UniFi Protect, making it easy to manage video exports with precise control over time periods and cameras. Whether for security, event monitoring, or archival purposes, this integration automates the process and simplifies video management.
+Using **protect-archiver** allows this service to streamline interactions with UniFi Protect, making it easy to manage video exports with precise control over time periods and with cameras. Whether for security, event monitoring, or archival purposes, this integration automates the process and simplifies video management.
 
 For more details on **protect-archiver**, visit the official [GitHub repository](https://github.com/danielfernau/unifi-protect-video-downloader).
 
