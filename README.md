@@ -5,12 +5,18 @@ The **Unifi Protect Event Manager** is a Flask-based service that integrates wit
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2024/09/unifi-protect-event-manager_index_screenshot.png?v=01"></center>
 
+Here’s the updated **Features** section to include the new functionality of combining exported files:
+
+---
+
 ## Features
 
 - **Event Management**: Start, extend, or cancel video recording events.
 - **Multiple Camera Support**: Trigger events for one or multiple cameras.
 - **Flexible Timing**: Configure how far back and how far into the future to record.
-- **Status Logging**: This function periodically logs the status of active events, providing the remaining time, start/end times, and involved cameras.
+- **Video File Combination**: Automatically combine exported video files from the same camera into a single file based on timestamps.
+- **Manage Original Files**: Choose whether to delete or keep the original split video files after combination using the `UPEM_KEEP_SPLIT_FILES` environment variable.
+- **Status Logging**: Periodically logs the status of active events, including remaining time, start/end times, and involved cameras.
 - **Home Assistant Integration**: Easily trigger events from Home Assistant automation.
 - **Dockerized Deployment**: Easily deploy via Docker Compose.
 
@@ -122,15 +128,17 @@ services:
 
 ### Environment Variables
 
-- **`TZ`**: Timezone setting (defaults to UTC if not set).
+- **`TZ`**: Timezone setting (defaults to `UTC` if not set).
 - **`UPEM_UNIFI_PROTECT_ADDRESS`**: Address of your UniFi Protect instance.
 - **`UPEM_UNIFI_PROTECT_USERNAME`**: Username for accessing UniFi Protect.
 - **`UPEM_UNIFI_PROTECT_PASSWORD`**: Password for accessing UniFi Protect.
-- **`UPEM_DEFAULT_PAST_MINUTES`**: Default time in minutes to record from the past.
-- **`UPEM_DEFAULT_FUTURE_MINUTES`**: Default time in minutes to record into the future.
-- **`UPEM_LOG_INTERVAL`**: Interval in seconds when the system logs active event status.
-- **`UPEM_MAX_RETRIES`**: Maximum number of retry attempts for failed exports.
-- **`UPEM_RETRY_DELAY`**: Delay in seconds between retry attempts for failed exports.
+- **`UPEM_DEFAULT_PAST_MINUTES`**: Default time in minutes to record from the past (defaults to `5` minutes).
+- **`UPEM_DEFAULT_FUTURE_MINUTES`**: Default time in minutes to record into the future (defaults to `5` minutes).
+- **`UPEM_LOG_INTERVAL`**: Interval in seconds when the system logs active event status (defaults to `10` seconds).
+- **`UPEM_MAX_RETRIES`**: Maximum number of retry attempts for failed exports (defaults to `3` retries).
+- **`UPEM_RETRY_DELAY`**: Delay in seconds between retry attempts for failed exports (defaults to `5` seconds).
+- **`UPEM_EXPORT_TIMEOUT`**: Maximum time in seconds for an export operation (defaults to `300` seconds).
+- **`UPEM_KEEP_SPLIT_FILES`**: Set to `false` to delete original split video files after combination. Defaults to `true` (keeps original files).
 
 ## Home Assistant Integration
 
